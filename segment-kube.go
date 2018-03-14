@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"fmt"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -51,7 +52,36 @@ func readKubeConfig(config *KubeConfig, path string) (err error) {
 	return
 }
 
+func containsDir(dir, toCheck string) bool {
+	// List the files in the directory
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	// Go through the files in current directory and return true if we found one.
+	for _, file := range files {
+		if file.Name() == toCheck && file.IsDir() {
+			return true
+		}
+	}
+	// Nothing found, let's check the parent
+	parent := filepath.Dir(dir)
+	if parent == "" || parent == "/" {
+		return false
+	}
+	return containsDir(parent, toCheck)
+}
+
 func segmentKube(p *powerline) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("failed to check cwd: %s\n", err)
+		return
+	}
+	if !containsDir(cwd, "_infra") {
+		return
+	}
+
 	paths := append(strings.Split(os.Getenv("KUBECONFIG"), ":"), path.Join(homePath(), ".kube", "config"))
 	config := &KubeConfig{}
 	for _, configPath := range paths {
